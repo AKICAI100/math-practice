@@ -348,7 +348,7 @@ function ColumnBoard({ problem, digits, carryMarks, activePlace, reveal, onCarry
             <button key={place} className={`carry-box ${editable ? 'active' : ''} ${shown ? 'marked' : ''}`} disabled={!editable} onClick={() => onCarry(carryIndex)} aria-label={`Carry into ${placeName(place)} column: ${shown ? 'one' : 'blank'}`}>
               {shown ? '1' : ''}
             </button>
-          ) : <span key={renderIndex} />;
+          ) : <span key={`blank-${renderIndex}`} />;
         })}
       </div>
       <div className="operand-row">{Array.from(paddedLeft).map((digit, index) => <span key={index}>{digit}</span>)}</div>
