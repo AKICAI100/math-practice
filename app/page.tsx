@@ -5,7 +5,7 @@ import { LEVELS, checkAnswer, generateProblem, loadProgress, medalFor } from '@/
 
 type Screen = 'title' | 'levels' | 'play' | 'results';
 type Problem = ReturnType<typeof generateProblem>;
-type Progress = { version: number; unlockedLevel: number; bestScores: Record<string, number>; soundEnabled: boolean };
+type Progress = { version: number; unlockedLevel: number; bestScores: Record<string, number>; soundEnabled: boolean; questionSeconds: number };
 
 const STORAGE_KEY = 'piggy-math-progress-v1';
 const PRAISE = ['Great!', 'Nice!', 'Perfect!', 'Oink-credible!'];
@@ -22,7 +22,7 @@ export default function Home() {
   const [activePlace, setActivePlace] = useState(0);
   const [phase, setPhase] = useState<'answering' | 'feedback'>('answering');
   const [feedback, setFeedback] = useState<{ correct: boolean; timedOut: boolean; message: string } | null>(null);
-  const [remainingMs, setRemainingMs] = useState(10000);
+  const [remainingMs, setRemainingMs] = useState(15000);
   const [finalScore, setFinalScore] = useState(0);
   const usedProblems = useRef(new Set<string>());
   const deadline = useRef(0);
@@ -65,7 +65,7 @@ export default function Home() {
     oscillator.onended = () => void context.close();
   }, [progress.soundEnabled]);
 
-  const questionTime = useMemo(() => (LEVELS[levelId - 1]?.digits === 2 ? 10000 : 15000), [levelId]);
+  const questionTime = useMemo(() => progress.questionSeconds * 1000, [progress.questionSeconds]);
 
   const prepareQuestion = useCallback((id: number) => {
     const nextProblem = generateProblem(id, Math.random, usedProblems.current);
@@ -76,12 +76,12 @@ export default function Home() {
     setActivePlace(0);
     setFeedback(null);
     setPhase('answering');
-    const duration = LEVELS[id - 1].digits === 2 ? 10000 : 15000;
+    const duration = progress.questionSeconds * 1000;
     setRemainingMs(duration);
     deadline.current = performance.now() + duration;
     lastBeepSecond.current = -1;
     ending.current = false;
-  }, []);
+  }, [progress.questionSeconds]);
 
   const completeSession = useCallback((sessionScore: number) => {
     const best = Math.max(progress.bestScores[levelId] ?? 0, sessionScore);
@@ -167,8 +167,15 @@ export default function Home() {
   function enterDigit(value: number) {
     if (phase !== 'answering' || !problem || activePlace >= digits.length) return;
     sound('tap');
-    setDigits((current) => current.map((digit, index) => (index === activePlace ? value : digit)));
-    setActivePlace((place) => place + 1);
+    const place = activePlace;
+    const nextDigits = digits.map((digit, index) => (index === place ? value : digit));
+    const nextCarries = carryMarks.map((mark, index) => (index === place ? problem.carries[index] : mark));
+    setDigits(nextDigits);
+    setCarryMarks(nextCarries);
+    setActivePlace(place + 1);
+    if (place === digits.length - 1) {
+      window.setTimeout(() => finishQuestion(checkAnswer(problem, nextDigits, nextCarries)), 260);
+    }
   }
 
   function undoDigit() {
@@ -176,18 +183,13 @@ export default function Home() {
     const target = activePlace - 1;
     sound('tap');
     setDigits((current) => current.map((digit, index) => (index === target ? null : digit)));
+    setCarryMarks((current) => current.map((mark, index) => (index === target ? 0 : mark)));
     setActivePlace(target);
   }
 
-  function toggleCarry(index: number) {
-    if (phase !== 'answering' || index !== activePlace - 1 || activePlace >= digits.length) return;
+  function chooseTime(seconds: number) {
+    saveProgress({ ...progress, questionSeconds: seconds });
     sound('tap');
-    setCarryMarks((current) => current.map((mark, markIndex) => (markIndex === index ? 1 - mark : mark)));
-  }
-
-  function submitAnswer() {
-    if (!problem || digits.some((digit) => digit === null)) return;
-    finishQuestion(checkAnswer(problem, digits, carryMarks));
   }
 
   function toggleSound() {
@@ -229,6 +231,14 @@ export default function Home() {
           <div><p className="eyebrow">PICK YOUR CHALLENGE</p><h2>Choose a Level</h2></div>
           {sharedSound}
         </header>
+        <section className="time-choice" aria-label="Question time">
+          <span>⏱ QUESTION TIME</span>
+          <div>
+            {[15, 20, 30].map((seconds) => (
+              <button key={seconds} className={progress.questionSeconds === seconds ? 'selected' : ''} onClick={() => chooseTime(seconds)}>{seconds}s</button>
+            ))}
+          </div>
+        </section>
         <section className="level-grid" aria-label="Levels">
           {LEVELS.map((level) => {
             const locked = level.id > progress.unlockedLevel;
@@ -302,12 +312,11 @@ export default function Home() {
               carryMarks={carryMarks}
               activePlace={activePlace}
               reveal={phase === 'feedback' && !feedback?.correct}
-              onCarry={toggleCarry}
             />
           )}
           {phase === 'answering' && (
             <p className="column-hint">
-              {activePlace === 0 ? 'Start with the ONES →' : activePlace < digits.length ? `Now the ${placeName(activePlace)}!` : 'Ready to check!'}
+              {activePlace === 0 ? 'Start with the ONES →' : activePlace < digits.length ? `Now the ${placeName(activePlace)}!` : 'Checking…'}
             </p>
           )}
         </section>
@@ -316,9 +325,9 @@ export default function Home() {
           <p>Tap your answer</p>
           <div className="keypad">
             {[1,2,3,4,5,6,7,8,9].map((number) => <button key={number} disabled={phase !== 'answering' || allEntered} onClick={() => enterDigit(number)}>{number}</button>)}
-            <button className="undo-key" disabled={phase !== 'answering' || activePlace === 0} onClick={undoDigit} aria-label="Undo">⌫</button>
+            <button className="undo-key" disabled={phase !== 'answering' || activePlace === 0 || allEntered} onClick={undoDigit} aria-label="Undo">⌫</button>
             <button disabled={phase !== 'answering' || allEntered} onClick={() => enterDigit(0)}>0</button>
-            <button className="check-key" disabled={!allEntered || phase !== 'answering'} onClick={submitAnswer} aria-label="Check answer">✓</button>
+            <span className="auto-key" aria-label="Answers check automatically">🐽</span>
           </div>
         </section>
       </div>
@@ -326,13 +335,12 @@ export default function Home() {
   );
 }
 
-function ColumnBoard({ problem, digits, carryMarks, activePlace, reveal, onCarry }: {
+function ColumnBoard({ problem, digits, carryMarks, activePlace, reveal }: {
   problem: Problem;
   digits: (number | null)[];
   carryMarks: number[];
   activePlace: number;
   reveal: boolean;
-  onCarry: (index: number) => void;
 }) {
   const places = Array.from({ length: problem.answerDigits.length }, (_, index) => problem.answerDigits.length - 1 - index);
   const paddedLeft = String(problem.left).padStart(problem.answerDigits.length, ' ');
@@ -342,12 +350,11 @@ function ColumnBoard({ problem, digits, carryMarks, activePlace, reveal, onCarry
       <div className="carry-row">
         {places.map((place, renderIndex) => {
           const carryIndex = place - 1;
-          const editable = !reveal && carryIndex >= 0 && carryIndex === activePlace - 1 && activePlace < digits.length;
           const shown = reveal ? (carryIndex >= 0 ? problem.carries[carryIndex] : 0) : (carryIndex >= 0 ? carryMarks[carryIndex] : 0);
           return carryIndex >= 0 ? (
-            <button key={place} className={`carry-box ${editable ? 'active' : ''} ${shown ? 'marked' : ''}`} disabled={!editable} onClick={() => onCarry(carryIndex)} aria-label={`Carry into ${placeName(place)} column: ${shown ? 'one' : 'blank'}`}>
+            <span key={place} className={`carry-box ${shown ? 'marked auto-carry' : ''}`} aria-label={`Automatic carry into ${placeName(place)} column: ${shown ? 'one' : 'blank'}`}>
               {shown ? '1' : ''}
-            </button>
+            </span>
           ) : <span key={`blank-${renderIndex}`} />;
         })}
       </div>

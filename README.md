@@ -7,8 +7,9 @@ A playful, touch-friendly web app that teaches children the real right-to-left p
 - Eight progressively harder 2-digit and 3-digit addition levels
 - Place-value aligned written calculations
 - Ones → tens → hundreds answer entry
-- Optional carry marks that start blank and toggle to `1`
-- Ten timed questions per session with gentle sound cues
+- Automatic carry marks that appear as each column is answered
+- A choice of 15, 20 or 30 seconds per question with gentle sound cues
+- Automatic answer checking as soon as the final digit is entered
 - Correct-answer celebrations and worked corrections
 - Gold, silver and bronze Pig results
 - Level unlocking and best scores saved on the device

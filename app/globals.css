@@ -57,6 +57,14 @@ button:disabled { cursor: default; }
 .top-bar h2 { margin: 1px 0 0; font-size: clamp(2rem, 6vw, 3.3rem); letter-spacing: -.045em; }
 .top-bar .eyebrow { margin: 0; }
 .level-screen { display: block; overflow: auto; padding: 30px 20px 105px; background: linear-gradient(#bfeaff, #f0fbff 68%); }
+.time-choice {
+  position: relative; z-index: 3; width: fit-content; margin: -8px auto 26px; padding: 9px 10px 9px 16px;
+  display: flex; align-items: center; gap: 12px; border: 3px solid var(--ink); border-radius: 18px;
+  background: white; box-shadow: 0 5px 0 var(--ink); font-size: .72rem; font-weight: 1000; letter-spacing: .08em;
+}
+.time-choice div { display: flex; gap: 7px; }
+.time-choice button { min-width: 54px; min-height: 42px; border: 2px solid var(--ink); border-radius: 11px; color: var(--ink); background: #f6eff6; font-weight: 1000; cursor: pointer; }
+.time-choice button.selected { color: white; background: var(--pink); box-shadow: inset 0 -3px 0 rgb(0 0 0 / 12%); }
 .level-grid {
   position: relative; z-index: 2; width: min(1000px, 100%); margin: auto; display: grid;
   grid-template-columns: repeat(4, 1fr); gap: 18px;
@@ -102,9 +110,10 @@ button:disabled { cursor: default; }
 .carry-row, .operand-row, .answer-row, .place-row { display: grid; grid-template-columns: repeat(var(--columns), var(--cell)); margin-left: 26px; }
 .carry-row { min-height: 54px; align-items: center; }
 .carry-row > * { justify-self: center; }
-.carry-box { width: 46px; height: 46px; border: 2px dashed #d5b9c1; border-radius: 12px; color: var(--pink-dark); background: #fff7fa; font: 900 1.45rem ui-monospace, monospace; }
+.carry-box { width: 46px; height: 46px; border: 2px dashed #d5b9c1; border-radius: 12px; display: grid; place-items: center; color: var(--pink-dark); background: #fff7fa; font: 900 1.45rem ui-monospace, monospace; }
 .carry-box.active { border: 3px solid var(--pink); background: #ffe2ec; cursor: pointer; animation: pulse 1.2s infinite; }
 .carry-box.marked { border-style: solid; }
+.carry-box.auto-carry { border-color: var(--pink); background: #ffe2ec; animation: carry-pop .24s ease-out both; }
 .operand-row { position: relative; font-size: clamp(2.8rem, 7vw, 4.2rem); line-height: 1.12; }
 .operand-row span { text-align: center; }
 .operand-row.second b { position: absolute; left: -28px; font-weight: 700; }
@@ -124,6 +133,7 @@ button:disabled { cursor: default; }
 .keypad button:disabled { opacity: .38; }
 .keypad .undo-key { background: #dceeff; font-size: 1.45rem; }
 .keypad .check-key { color: white; background: #49bd71; font-size: 2rem; }
+.keypad .auto-key { min-height: 72px; display: grid; place-items: center; border: 3px dashed #caaab7; border-radius: 18px; background: rgb(255 255 255 / 55%); font-size: 2rem; }
 .keypad-card.disabled { filter: grayscale(.2); }
 
 .result-screen { background: linear-gradient(#ffddb0, #fff7d6 70%); }
@@ -144,6 +154,7 @@ button:disabled { cursor: default; }
 @keyframes pulse { 50% { transform: scale(1.045); } }
 @keyframes celebration { to { transform: translateY(-10px) rotate(4deg); } }
 @keyframes banner-pop { from { transform: translateX(-50%) scale(.7); } }
+@keyframes carry-pop { from { transform: scale(.45); opacity: 0; } }
 
 @media (max-width: 780px) {
   .level-grid { grid-template-columns: repeat(2, 1fr); }
@@ -160,6 +171,8 @@ button:disabled { cursor: default; }
   .app-shell { padding-left: 12px; padding-right: 12px; }
   .level-screen { padding: 18px 11px 86px; }
   .top-bar { grid-template-columns: 48px 1fr 48px; gap: 7px; }
+  .time-choice { width: 100%; justify-content: space-between; padding-left: 12px; gap: 6px; }
+  .time-choice button { min-width: 48px; }
   .sound-button, .round-button { width: 46px; height: 46px; min-width: 46px; }
   .level-grid { gap: 11px; }
   .level-card { min-height: 188px; border-radius: 20px; padding: 18px 6px 11px; }

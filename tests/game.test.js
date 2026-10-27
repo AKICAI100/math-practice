@@ -31,9 +31,10 @@ test('answer checking includes every digit and carry mark', () => {
 });
 
 test('damaged saved progress safely falls back', () => {
-  assert.deepEqual(loadProgress('{bad'), { version: 1, unlockedLevel: 1, bestScores: {}, soundEnabled: true });
+  assert.deepEqual(loadProgress('{bad'), { version: 1, unlockedLevel: 1, bestScores: {}, soundEnabled: true, questionSeconds: 15 });
   const value = loadProgress(JSON.stringify({ unlockedLevel: 99, bestScores: { 1: 14 }, soundEnabled: false }));
   assert.equal(value.unlockedLevel, 8);
   assert.equal(value.bestScores[1], 10);
   assert.equal(value.soundEnabled, false);
+  assert.equal(value.questionSeconds, 15);
 });
