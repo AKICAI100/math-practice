@@ -1,62 +1,39 @@
 # Piggy Math
 
-A playful, touch-friendly web app that teaches children the real right-to-left procedure for written column addition.
+子ども向けの、筆算による足し算練習アプリです。React やビルドツールを使わない、依存関係ゼロの静的 Web アプリとして動作します。
 
-## What it includes
+## 使い方
 
-- Eight progressively harder 2-digit and 3-digit addition levels
-- Place-value aligned written calculations
-- Ones → tens → hundreds answer entry
-- Automatic carry marks that appear as each column is answered
-- A choice of 15, 20 or 30 seconds per question with gentle sound cues
-- Automatic answer checking as soon as the final digit is entered
-- Correct-answer celebrations and worked corrections
-- Gold, silver and bronze Pig results
-- Level unlocking and best scores saved on the device
-- Responsive layouts for iPhone, iPad and desktop
+`index.html` をブラウザで直接開くだけで遊べます。`npm install` やビルド、Web サーバーは必要ありません。
 
-Subtraction is intentionally not included.
+## 機能
 
-## Run locally
+- 2桁・3桁の足し算レベル
+- 繰り上がりあり／なしの段階的なレベル
+- 答えを右の桁から左の桁へ入力
+- 答えの入力に合わせた繰り上がりの自動表示
+- 15秒・20秒・30秒から選べるタイマー
+- 1セッション10問
+- スコア、メダル、ベストスコア
+- 成績に応じたレベル解放
+- Piggy Math のテーマ、効果音、レスポンシブ表示
+- 進捗をブラウザの `localStorage` に保存
 
-Install dependencies, then start the development server:
+## ファイル構成
 
-```bash
-pnpm install
-pnpm dev
+```text
+index.html  画面の土台
+style.css   デザインとレスポンシブ表示
+script.js   ゲームロジックと画面制御
+README.md   この説明
 ```
 
-Open the local address shown in the terminal (normally `http://localhost:3000`).
+## GitHub Pages で公開する
 
-## Test and build
+GitHub リポジトリの **Settings → Pages** で次のように設定します。
 
-```bash
-pnpm test
-pnpm typecheck
-pnpm build
-```
+1. Source を **Deploy from a branch** にする
+2. Branch を **main**、フォルダーを **/(root)** にする
+3. **Save** を押す
 
-The automated tests generate thousands of problems and verify every level's carry rules, consecutive carries, answer validation and saved-progress recovery.
-
-## Project structure
-
-- `app/page.tsx` — screens, session state, timer, sound and interactions
-- `app/globals.css` — child-friendly responsive visual design
-- `lib/game.js` — pure problem generation, validation, scoring and persistence parsing
-- `tests/game.test.js` — automated level and answer tests
-- `public/` — static icons and assets
-
-## Level guide
-
-1. Two digits, no carry
-2. Two digits, one carry from the ones column
-3. Two-digit mixed practice
-4. Three digits, no carry
-5. Three digits, exactly one carry
-6. Three digits, exactly two carries
-7. A carry that triggers another carry
-8. Mixed three-digit challenge
-
-## GitHub Pages
-
-Run `pnpm build`, then publish the generated static client output. For a project site hosted below a repository path, set the matching base path in the hosting configuration before building. GitHub Actions can build the project and upload the static output directory as the Pages artifact.
+設定後は、main ブランチ直下の `index.html` がそのまま公開されます。
