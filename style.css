@@ -214,15 +214,15 @@ button:disabled { cursor: default; }
   .game-header { grid-template-columns: 48px 1fr 48px; gap: 7px; margin-bottom: 4px; }
   .pig-dots { gap: 3px; }.pig-dots i { width: 15px; }
   .game-layout { gap: 8px; }
-  .work-card { min-height: 360px; padding: 6px 12px 8px; border-radius: 23px; }
+  .work-card { min-height: 320px; padding: 4px 12px; justify-content: flex-start; border-radius: 23px; }
   .feedback-banner { top: 4px; min-height: 40px; padding: 7px 13px; font-size: .95rem; }
   .timer-row { top: 8px; left: 15px; right: 15px; }
   .work-card.has-feedback .timer-row { top: 50px; }
-  .column-board { --cell: min(20vw, 68px); margin-top: 40px; }
-  .work-card.has-feedback .column-board { margin-top: 80px; }
-  .carry-row { min-height: 47px; }.carry-box { width: 42px; height: 42px; }
+  .column-board { --cell: min(20vw, 68px); margin-top: 24px; }
+  .work-card.has-feedback .column-board { margin-top: 70px; }
+  .carry-row { min-height: 42px; }.carry-box { width: 42px; height: 42px; }
   .borrow-box { min-height: 42px; }
-  .column-hint { margin-top: 6px; padding-top: 5px; padding-bottom: 5px; font-size: .76rem; }
+  .column-hint { margin-top: 3px; padding-top: 3px; padding-bottom: 3px; font-size: .76rem; }
   .keypad-card { padding: 10px 18px 12px; border-radius: 23px; }
   .keypad-card > p { margin-bottom: 7px; }
 }
