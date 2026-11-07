@@ -1,6 +1,6 @@
-/** Pure arithmetic and level-generation logic. No browser APIs live here. */
+/** Pure arithmetic, level generation, and progress migration. */
 
-const LEVELS = [
+const ADDITION_LEVELS = [
   { id: 1, digits: 2, title: 'No Carry', tag: 'EASY PEASY', color: 'mint' },
   { id: 2, digits: 2, title: 'Carry!', tag: 'ONE CARRY', color: 'yellow' },
   { id: 3, digits: 2, title: 'Mixed Up', tag: 'MIX IT UP', color: 'blue' },
@@ -11,7 +11,23 @@ const LEVELS = [
   { id: 8, digits: 3, title: 'Mega Mix', tag: 'FINAL BOSS', color: 'rainbow' },
 ];
 
-function analyzeProblem(left, right, width) {
+const SUBTRACTION_LEVELS = [
+  { id: 1, digits: 2, title: 'No Borrow', tag: 'EASY PEASY', color: 'mint' },
+  { id: 2, digits: 2, title: 'Borrow!', tag: 'ONE BORROW', color: 'yellow' },
+  { id: 3, digits: 2, title: 'Mixed Up', tag: 'MIX IT UP', color: 'blue' },
+  { id: 4, digits: 3, title: 'No Borrow', tag: 'THREE DIGITS', color: 'lilac' },
+  { id: 5, digits: 3, title: 'One Borrow', tag: 'GETTING GOOD', color: 'peach' },
+  { id: 6, digits: 3, title: 'Two Borrows', tag: 'DOUBLE UP', color: 'pink' },
+  { id: 7, digits: 3, title: 'Borrow Chain', tag: 'SUPER PIG', color: 'orange' },
+  { id: 8, digits: 3, title: 'Mega Mix', tag: 'FINAL BOSS', color: 'rainbow' },
+];
+
+const LEVELS_BY_OPERATION = {
+  addition: ADDITION_LEVELS,
+  subtraction: SUBTRACTION_LEVELS,
+};
+
+function analyzeAddition(left, right, width) {
   const leftDigits = toDigits(left, width);
   const rightDigits = toDigits(right, width);
   const answerDigits = [];
@@ -30,59 +46,103 @@ function analyzeProblem(left, right, width) {
     leftDigits,
     rightDigits,
     answerDigits,
+    marks: carries,
     carries,
-    carryCount: carries.reduce((sum, value) => sum + value, 0),
-    consecutiveByIncomingCarry:
-      Boolean(carries[0] && carries[1]) && leftDigits[1] + rightDigits[1] === 9,
+    operationCount: carries.reduce((sum, value) => sum + value, 0),
+    chained: Boolean(carries[0] && carries[1]) && leftDigits[1] + rightDigits[1] === 9,
     result: left + right,
   };
 }
 
-function validateForLevel(levelId, left, right) {
-  const level = LEVELS[levelId - 1];
+function analyzeSubtraction(left, right, width) {
+  const leftDigits = toDigits(left, width);
+  const rightDigits = toDigits(right, width);
+  const answerDigits = [];
+  const borrows = [];
+  let incomingBorrow = 0;
+
+  for (let place = 0; place < width; place += 1) {
+    const adjustedTop = leftDigits[place] - incomingBorrow;
+    const borrow = adjustedTop < rightDigits[place] ? 1 : 0;
+    answerDigits.push(adjustedTop + borrow * 10 - rightDigits[place]);
+    borrows.push(borrow);
+    incomingBorrow = borrow;
+  }
+
+  return {
+    leftDigits,
+    rightDigits,
+    answerDigits,
+    marks: borrows,
+    borrows,
+    operationCount: borrows.reduce((sum, value) => sum + value, 0),
+    // The tens column only needs to borrow because the ones column reduced it.
+    chained:
+      Boolean(borrows[0] && borrows[1]) &&
+      leftDigits[1] >= rightDigits[1] &&
+      leftDigits[1] - 1 < rightDigits[1],
+    result: left - right,
+  };
+}
+
+function validateForLevel(operation, levelId, left, right) {
+  const level = LEVELS_BY_OPERATION[operation]?.[levelId - 1];
   if (!level) return false;
   const min = 10 ** (level.digits - 1);
   const max = 10 ** level.digits - 1;
   if (left < min || right < min || left > max || right > max) return false;
-  const a = analyzeProblem(left, right, level.digits);
-  // The lesson's carry controls are between operand columns, so avoid a final overflow.
-  if (a.carries[level.digits - 1] !== 0) return false;
 
-  const inner = a.carries.slice(0, level.digits - 1);
-  const count = inner.reduce((sum, value) => sum + value, 0);
+  if (operation === 'addition') {
+    const analysis = analyzeAddition(left, right, level.digits);
+    if (analysis.carries[level.digits - 1] !== 0) return false;
+    const count = analysis.carries.slice(0, level.digits - 1).reduce((sum, value) => sum + value, 0);
+    if (levelId === 1 || levelId === 4) return count === 0;
+    if (levelId === 2) return analysis.carries[0] === 1 && count === 1;
+    if (levelId === 3) return count <= 1;
+    if (levelId === 5) return count === 1;
+    if (levelId === 6) return count === 2;
+    if (levelId === 7) return count === 2 && analysis.chained;
+    return levelId === 8 && count <= 2;
+  }
+
+  if (left < right) return false;
+  const analysis = analyzeSubtraction(left, right, level.digits);
+  if (analysis.borrows[level.digits - 1] !== 0 || analysis.result < 0) return false;
+  const count = analysis.borrows.slice(0, level.digits - 1).reduce((sum, value) => sum + value, 0);
   if (levelId === 1 || levelId === 4) return count === 0;
-  if (levelId === 2) return inner[0] === 1 && count === 1;
-  if (levelId === 3) return count === 0 || (inner[0] === 1 && count === 1);
+  if (levelId === 2) return analysis.borrows[0] === 1 && count === 1;
+  if (levelId === 3) return count <= 1;
   if (levelId === 5) return count === 1;
   if (levelId === 6) return count === 2;
-  if (levelId === 7) return count === 2 && a.consecutiveByIncomingCarry;
-  if (levelId === 8) return count >= 0 && count <= 2;
-  return false;
+  if (levelId === 7) return count === 2 && analysis.chained;
+  return levelId === 8 && count <= 2;
 }
 
-function generateProblem(levelId, random = Math.random, excluded = new Set()) {
-  const level = LEVELS[levelId - 1];
-  if (!level) throw new Error(`Unknown level: ${levelId}`);
+function generateProblem(operation, levelId, random = Math.random, excluded = new Set()) {
+  const level = LEVELS_BY_OPERATION[operation]?.[levelId - 1];
+  if (!level) throw new Error(`Unknown ${operation} level: ${levelId}`);
   const min = 10 ** (level.digits - 1);
   const max = 10 ** level.digits - 1;
 
   for (let attempt = 0; attempt < 50000; attempt += 1) {
     const left = randomInt(min, max, random);
     const right = randomInt(min, max, random);
-    const key = canonicalKey(left, right);
-    if (excluded.has(key) || isTrivial(left, right)) continue;
-    if (!validateForLevel(levelId, left, right)) continue;
-    const analysis = analyzeProblem(left, right, level.digits);
-    return { left, right, width: level.digits, key, ...analysis };
+    const key = operation === 'addition' ? canonicalAdditionKey(left, right) : `${left}-${right}`;
+    if (excluded.has(key) || isTrivial(operation, left, right)) continue;
+    if (!validateForLevel(operation, levelId, left, right)) continue;
+    const analysis = operation === 'addition'
+      ? analyzeAddition(left, right, level.digits)
+      : analyzeSubtraction(left, right, level.digits);
+    return { operation, left, right, width: level.digits, key, ...analysis };
   }
-  throw new Error(`Could not generate a valid level ${levelId} problem`);
+  throw new Error(`Could not generate a valid ${operation} level ${levelId} problem`);
 }
 
-function checkAnswer(problem, digits, carryMarks) {
+function checkAnswer(problem, digits, enteredMarks) {
   if (digits.length !== problem.answerDigits.length) return false;
   if (!digits.every((digit, index) => digit === problem.answerDigits[index])) return false;
-  const expectedCarries = problem.carries.slice(0, problem.answerDigits.length - 1);
-  return expectedCarries.every((carry, index) => Number(Boolean(carryMarks[index])) === carry);
+  const expected = problem.marks.slice(0, problem.answerDigits.length - 1);
+  return expected.every((mark, index) => Number(Boolean(enteredMarks[index])) === mark);
 }
 
 function medalFor(score) {
@@ -92,25 +152,70 @@ function medalFor(score) {
   return { name: 'TRY AGAIN', emoji: '💪', tone: 'try' };
 }
 
+function cleanScores(value) {
+  return Object.fromEntries(
+    Object.entries(value ?? {})
+      .filter(([key, score]) => Number(key) >= 1 && Number(key) <= 8 && Number.isInteger(score))
+      .map(([key, score]) => [key, Math.max(0, Math.min(10, score))]),
+  );
+}
+
+function cleanOperationProgress(value) {
+  return {
+    unlockedLevel: clampInt(value?.unlockedLevel, 1, 8, 1),
+    bestScores: cleanScores(value?.bestScores),
+  };
+}
+
 function loadProgress(raw) {
-  const fallback = { version: 1, unlockedLevel: 1, bestScores: {}, soundEnabled: true, questionSeconds: 15 };
+  const fallback = {
+    version: 2,
+    operations: {
+      addition: cleanOperationProgress(),
+      subtraction: cleanOperationProgress(),
+    },
+    soundEnabled: true,
+    questionSeconds: 15,
+  };
   if (!raw) return fallback;
+
   try {
     const value = JSON.parse(raw);
+    // Version 1 stored Addition at the top level. Preserve it during migration.
+    const oldAddition = {
+      unlockedLevel: value.unlockedLevel,
+      bestScores: value.bestScores,
+    };
     return {
-      version: 1,
-      unlockedLevel: clampInt(value.unlockedLevel, 1, 8, 1),
-      bestScores: Object.fromEntries(
-        Object.entries(value.bestScores ?? {})
-          .filter(([key, score]) => Number(key) >= 1 && Number(key) <= 8 && Number.isInteger(score))
-          .map(([key, score]) => [key, Math.max(0, Math.min(10, score))]),
-      ),
+      version: 2,
+      operations: {
+        addition: cleanOperationProgress(value.operations?.addition ?? oldAddition),
+        subtraction: cleanOperationProgress(value.operations?.subtraction),
+      },
       soundEnabled: typeof value.soundEnabled === 'boolean' ? value.soundEnabled : true,
       questionSeconds: [15, 20, 30].includes(value.questionSeconds) ? value.questionSeconds : 15,
     };
   } catch {
     return fallback;
   }
+}
+
+function recordSession(progressValue, operationName, completedLevel, sessionScore) {
+  const operationProgress = progressValue.operations[operationName];
+  const best = Math.max(operationProgress.bestScores[completedLevel] || 0, sessionScore);
+  const unlockedLevel = sessionScore >= 8
+    ? Math.max(operationProgress.unlockedLevel, Math.min(8, completedLevel + 1))
+    : operationProgress.unlockedLevel;
+  return {
+    ...progressValue,
+    operations: {
+      ...progressValue.operations,
+      [operationName]: {
+        unlockedLevel,
+        bestScores: { ...operationProgress.bestScores, [completedLevel]: best },
+      },
+    },
+  };
 }
 
 function toDigits(number, width) {
@@ -121,12 +226,15 @@ function randomInt(min, max, random) {
   return Math.floor(random() * (max - min + 1)) + min;
 }
 
-function canonicalKey(left, right) {
+function canonicalAdditionKey(left, right) {
   return left < right ? `${left}+${right}` : `${right}+${left}`;
 }
 
-function isTrivial(left, right) {
-  return (left % 10 === 0 && right % 10 === 0) || Math.abs(left - right) === 0;
+function isTrivial(operation, left, right) {
+  if (operation === 'subtraction') {
+    return left === right || left - right < 2 || (left % 10 === 0 && right % 10 === 0);
+  }
+  return (left % 10 === 0 && right % 10 === 0) || left === right;
 }
 
 function clampInt(value, min, max, fallback) {
@@ -140,13 +248,14 @@ const PRAISE = ['Great!', 'Nice!', 'Perfect!', 'Oink-credible!'];
 const app = document.getElementById('app');
 let progress = loadProgress(readSavedProgress());
 let screen = 'title';
+let operation = 'addition';
 let levelId = 1;
 let questionIndex = 0;
 let score = 0;
 let finalScore = 0;
 let problem = null;
 let digits = [];
-let carryMarks = [];
+let enteredMarks = [];
 let activePlace = 0;
 let phase = 'answering';
 let feedback = null;
@@ -158,12 +267,16 @@ let inputLocked = false;
 let usedProblems = new Set();
 let lastBeepSecond = -1;
 
+function currentOperationProgress() {
+  return progress.operations[operation];
+}
+
 function saveProgress(next) {
   progress = next;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   } catch {
-    // The game remains fully playable if a browser blocks storage for file URLs.
+    // The game remains playable if a browser blocks storage for file URLs.
   }
 }
 
@@ -209,6 +322,7 @@ function decorations() {
 
 function render() {
   if (screen === 'title') renderTitle();
+  else if (screen === 'operations') renderOperations();
   else if (screen === 'levels') renderLevels();
   else if (screen === 'play') renderPlay();
   else renderResults();
@@ -220,25 +334,52 @@ function renderTitle() {
       ${decorations()}${soundButton()}
       <section class="title-card" aria-labelledby="app-title">
         <div class="mascot bounce" aria-label="Happy pig">🐷</div>
-        <p class="eyebrow">COLUMN ADDITION CHALLENGE</p>
+        <p class="eyebrow">COLUMN MATH CHALLENGE</p>
         <h1 id="app-title">PIGGY<br>MATH</h1>
-        <p class="title-copy">Add it up, one column at a time!</p>
-        <button class="start-button" data-action="levels"><span>START</span><span aria-hidden="true">→</span></button>
+        <p class="title-copy">Solve it, one column at a time!</p>
+        <button class="start-button" data-action="operations"><span>START</span><span aria-hidden="true">→</span></button>
       </section>
     </main>`;
   bindCommonActions();
-  app.querySelector('[data-action="levels"]').addEventListener('click', () => {
-    sound('tap'); screen = 'levels'; render();
+  app.querySelector('[data-action="operations"]').addEventListener('click', () => {
+    sound('tap'); screen = 'operations'; render();
   });
 }
 
+function renderOperations() {
+  app.innerHTML = `<main class="app-shell operation-screen">
+    ${decorations()}
+    <header class="top-bar operation-header">
+      <button class="round-button" data-action="title" aria-label="Back to title">←</button>
+      <div><p class="eyebrow">PICK YOUR MATH</p><h2>Choose Math</h2></div>
+      ${soundButton()}
+    </header>
+    <section class="operation-grid" aria-label="Math operations">
+      <button class="operation-card addition-card" data-operation="addition">
+        <span class="operation-icon" aria-hidden="true">➕</span><strong>ADDITION</strong><span>Add it up!</span>
+      </button>
+      <button class="operation-card subtraction-card" data-operation="subtraction">
+        <span class="operation-icon" aria-hidden="true">➖</span><strong>SUBTRACTION</strong><span>Take it away!</span>
+      </button>
+    </section>
+  </main>`;
+  bindCommonActions();
+  app.querySelector('[data-action="title"]').addEventListener('click', () => { screen = 'title'; render(); });
+  app.querySelectorAll('[data-operation]').forEach((button) => button.addEventListener('click', () => {
+    operation = button.dataset.operation;
+    sound('tap'); screen = 'levels'; render();
+  }));
+}
+
 function renderLevels() {
-  const cards = LEVELS.map((level) => {
-    const locked = level.id > progress.unlockedLevel;
-    const best = progress.bestScores[level.id];
+  const levels = LEVELS_BY_OPERATION[operation];
+  const operationProgress = currentOperationProgress();
+  const cards = levels.map((level) => {
+    const locked = level.id > operationProgress.unlockedLevel;
+    const best = operationProgress.bestScores[level.id];
     return `<button class="level-card ${level.color} ${locked ? 'locked' : ''}" data-level="${level.id}" ${locked ? 'disabled' : ''}>
       <span class="level-number">${level.id}</span>
-      <span class="level-icon" aria-hidden="true">${locked ? '🔒' : level.digits === 2 ? '🐽' : '🐷'}</span>
+      <span class="level-icon" aria-hidden="true">${locked ? '🔒' : operation === 'addition' ? '➕' : '➖'}</span>
       <span class="level-digits">${level.digits} DIGITS</span>
       <strong>${locked ? 'Locked' : level.title}</strong>
       <span class="level-tag">${locked ? `Score 8+ on Level ${level.id - 1}` : level.tag}</span>
@@ -249,19 +390,19 @@ function renderLevels() {
   app.innerHTML = `<main class="app-shell level-screen">
     ${decorations()}
     <header class="top-bar">
-      <button class="round-button" data-action="title" aria-label="Back to title">←</button>
-      <div><p class="eyebrow">PICK YOUR CHALLENGE</p><h2>Choose a Level</h2></div>
+      <button class="round-button" data-action="operations" aria-label="Back to Choose Math">←</button>
+      <div><p class="eyebrow">${operation.toUpperCase()}</p><h2>Choose a Level</h2></div>
       ${soundButton()}
     </header>
     <section class="time-choice" aria-label="Question time">
       <span>⏱ QUESTION TIME</span>
       <div>${[15, 20, 30].map((seconds) => `<button data-seconds="${seconds}" class="${progress.questionSeconds === seconds ? 'selected' : ''}">${seconds}s</button>`).join('')}</div>
     </section>
-    <section class="level-grid" aria-label="Levels">${cards}</section>
+    <section class="level-grid" aria-label="${operation} levels">${cards}</section>
   </main>`;
 
   bindCommonActions();
-  app.querySelector('[data-action="title"]').addEventListener('click', () => { screen = 'title'; render(); });
+  app.querySelector('[data-action="operations"]').addEventListener('click', () => { screen = 'operations'; render(); });
   app.querySelectorAll('[data-seconds]').forEach((button) => button.addEventListener('click', () => {
     saveProgress({ ...progress, questionSeconds: Number(button.dataset.seconds) });
     sound('tap'); renderLevels();
@@ -281,10 +422,10 @@ function startLevel(id) {
 }
 
 function prepareQuestion() {
-  problem = generateProblem(levelId, Math.random, usedProblems);
+  problem = generateProblem(operation, levelId, Math.random, usedProblems);
   usedProblems.add(problem.key);
   digits = Array(problem.answerDigits.length).fill(null);
-  carryMarks = Array(problem.answerDigits.length - 1).fill(0);
+  enteredMarks = Array(problem.answerDigits.length - 1).fill(0);
   activePlace = 0;
   feedback = null;
   phase = 'answering';
@@ -299,7 +440,8 @@ function prepareQuestion() {
 function renderPlay() {
   const timeRatio = Math.max(0, Math.min(1, remainingMs / (progress.questionSeconds * 1000)));
   const allEntered = digits.length > 0 && digits.every((digit) => digit !== null);
-  app.innerHTML = `<main class="app-shell play-screen">
+  const operationLabel = operation === 'addition' ? 'addition' : 'subtraction';
+  app.innerHTML = `<main class="app-shell play-screen ${operation}">
     <header class="game-header">
       <button class="round-button" data-action="exit" aria-label="Exit session">×</button>
       <div class="question-progress"><span>QUESTION ${questionIndex + 1} / 10</span>
@@ -307,7 +449,7 @@ function renderPlay() {
       </div>${soundButton()}
     </header>
     <div class="game-layout">
-      <section class="work-card" aria-label="Written addition problem">
+      <section class="work-card ${feedback ? 'has-feedback' : ''}" aria-label="Written ${operationLabel} problem">
         <output class="feedback-banner ${feedback?.correct ? 'is-correct' : ''}" aria-live="polite">${feedback ? `<span>${feedback.correct ? '✨' : '💡'}</span>${feedback.message}` : ''}</output>
         <div class="timer-row"><span class="timer-label">⏱ <b id="timer-seconds">${Math.ceil(remainingMs / 1000)}</b>s</span>
           <div class="timer-track"><span id="timer-bar" class="${timeRatio < .25 ? 'urgent' : ''}" style="width:${timeRatio * 100}%"></span></div>
@@ -338,23 +480,38 @@ function columnBoard() {
   const paddedLeft = String(problem.left).padStart(problem.answerDigits.length, ' ');
   const paddedRight = String(problem.right).padStart(problem.answerDigits.length, ' ');
   const reveal = phase === 'feedback' && feedback && !feedback.correct;
-  const carryRow = places.map((place) => {
-    const carryIndex = place - 1;
-    if (carryIndex < 0) return '<span></span>';
-    const shown = reveal ? problem.carries[carryIndex] : carryMarks[carryIndex];
-    return `<span class="carry-box ${shown ? 'marked auto-carry' : ''}" aria-label="Automatic carry into ${placeName(place)} column: ${shown ? 'one' : 'blank'}">${shown ? '1' : ''}</span>`;
-  }).join('');
+  const notationRow = operation === 'addition'
+    ? additionNotation(places, reveal)
+    : subtractionNotation(places, reveal);
   const answer = places.map((place) => {
     const value = reveal ? problem.answerDigits[place] : digits[place];
     return `<span class="${place === activePlace ? 'active' : ''} ${value !== null ? 'filled' : ''}">${value ?? ''}</span>`;
   }).join('');
-  return `<div class="column-board ${reveal ? 'revealing' : ''}" style="--columns:${problem.answerDigits.length}">
-    <div class="carry-row">${carryRow}</div>
+  return `<div class="column-board ${reveal ? 'revealing' : ''} ${operation}" style="--columns:${problem.answerDigits.length}">
+    <div class="carry-row">${notationRow}</div>
     <div class="operand-row">${Array.from(paddedLeft, (digit) => `<span>${digit}</span>`).join('')}</div>
-    <div class="operand-row second"><b aria-hidden="true">+</b>${Array.from(paddedRight, (digit) => `<span>${digit}</span>`).join('')}</div>
+    <div class="operand-row second"><b aria-hidden="true">${operation === 'addition' ? '+' : '−'}</b>${Array.from(paddedRight, (digit) => `<span>${digit}</span>`).join('')}</div>
     <div class="sum-line"></div><div class="answer-row">${answer}</div>
     <div class="place-row">${places.map((place) => `<span>${placeShort(place)}</span>`).join('')}</div>
   </div>`;
+}
+
+function additionNotation(places, reveal) {
+  return places.map((place) => {
+    const markIndex = place - 1;
+    if (markIndex < 0) return '<span></span>';
+    const shown = reveal ? problem.marks[markIndex] : enteredMarks[markIndex];
+    return `<span class="carry-box ${shown ? 'marked auto-carry' : ''}" aria-label="Automatic carry into ${placeName(place)} column: ${shown ? 'one' : 'blank'}">${shown ? '1' : ''}</span>`;
+  }).join('');
+}
+
+function subtractionNotation(places, reveal) {
+  return places.map((place) => {
+    const receivesBorrow = place < problem.width - 1 && (reveal ? problem.borrows[place] : enteredMarks[place]);
+    const givesBorrow = place > 0 && (reveal ? problem.borrows[place - 1] : enteredMarks[place - 1]);
+    const notes = [receivesBorrow ? '+10' : '', givesBorrow ? '−1' : ''].filter(Boolean);
+    return `<span class="borrow-box ${notes.length ? 'marked auto-carry' : ''}" aria-label="${notes.length ? `${placeName(place)} column ${notes.join(' and ')}` : `No borrowing in ${placeName(place)} column`}">${notes.join(' ')}</span>`;
+  }).join('');
 }
 
 function enterDigit(value) {
@@ -362,12 +519,12 @@ function enterDigit(value) {
   sound('tap');
   const place = activePlace;
   digits[place] = value;
-  if (place < carryMarks.length) carryMarks[place] = problem.carries[place];
+  if (place < enteredMarks.length) enteredMarks[place] = problem.marks[place];
   activePlace += 1;
   if (place === digits.length - 1) inputLocked = true;
   renderPlay();
   if (inputLocked) {
-    feedbackId = window.setTimeout(() => finishQuestion(checkAnswer(problem, digits, carryMarks)), 260);
+    feedbackId = window.setTimeout(() => finishQuestion(checkAnswer(problem, digits, enteredMarks)), 260);
   }
 }
 
@@ -376,7 +533,7 @@ function undoDigit() {
   sound('tap');
   const target = activePlace - 1;
   digits[target] = null;
-  if (target < carryMarks.length) carryMarks[target] = 0;
+  if (target < enteredMarks.length) enteredMarks[target] = 0;
   activePlace = target;
   renderPlay();
 }
@@ -423,9 +580,7 @@ function finishQuestion(correct, timedOut = false) {
 
 function completeSession() {
   clearTimers();
-  const best = Math.max(progress.bestScores[levelId] || 0, score);
-  const unlockedLevel = score >= 8 ? Math.max(progress.unlockedLevel, Math.min(8, levelId + 1)) : progress.unlockedLevel;
-  saveProgress({ ...progress, unlockedLevel, bestScores: { ...progress.bestScores, [levelId]: best } });
+  saveProgress(recordSession(progress, operation, levelId, score));
   finalScore = score;
   screen = 'results';
   render();
@@ -434,10 +589,10 @@ function completeSession() {
 function renderResults() {
   const medal = medalFor(finalScore);
   app.innerHTML = `<main class="app-shell result-screen ${medal.tone}">${decorations()}${soundButton()}
-    <section class="result-card"><p class="eyebrow">SESSION COMPLETE!</p>
+    <section class="result-card"><p class="eyebrow">${operation.toUpperCase()} COMPLETE!</p>
       <div class="result-pig" aria-hidden="true">🐷</div><div class="medal" aria-hidden="true">${medal.emoji}</div>
       <h2>${medal.name}</h2><p class="big-score"><strong>${finalScore}</strong><span>/ 10</span></p>
-      ${finalScore >= 8 && levelId < 8 ? `<p class="unlock-message">🔓 Level ${levelId + 1} unlocked!</p>` : ''}
+      ${finalScore >= 8 && levelId < 8 ? `<p class="unlock-message">🔓 ${operation === 'addition' ? 'Addition' : 'Subtraction'} Level ${levelId + 1} unlocked!</p>` : ''}
       <div class="result-actions"><button class="primary-button" data-action="replay">PLAY AGAIN ↻</button>
         <button class="secondary-button" data-action="levels">CHOOSE LEVELS</button></div>
     </section></main>`;

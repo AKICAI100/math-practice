@@ -54,6 +54,25 @@ button:disabled { cursor: default; }
 }
 .top-bar h2 { margin: 1px 0 0; font-size: clamp(2rem, 6vw, 3.3rem); letter-spacing: -.045em; }
 .top-bar .eyebrow { margin: 0; }
+.operation-screen { display: block; overflow: auto; padding: 30px 20px 105px; }
+.operation-header { margin-bottom: 48px; }
+.operation-grid {
+  position: relative; z-index: 2; width: min(820px, 100%); margin: auto;
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px;
+}
+.operation-card {
+  min-height: 330px; padding: 32px 20px; border: 4px solid var(--ink); border-radius: 34px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  color: var(--ink); box-shadow: 0 10px 0 var(--ink); cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+}
+.operation-card:hover { transform: translateY(-5px) rotate(-1deg); box-shadow: 0 15px 0 var(--ink); }
+.operation-card:active { transform: translateY(7px); box-shadow: 0 3px 0 var(--ink); }
+.addition-card { background: #ffe272; }
+.subtraction-card { background: #b8e4ff; }
+.operation-icon { font-size: 5.4rem; line-height: 1; }
+.operation-card strong { font-size: clamp(1.7rem, 5vw, 2.6rem); }
+.operation-card > span:last-child { font-size: 1.05rem; font-weight: 900; }
 .level-screen { display: block; overflow: auto; padding: 30px 20px 105px; background: linear-gradient(#bfeaff, #f0fbff 68%); }
 .time-choice {
   position: relative; z-index: 3; width: fit-content; margin: -8px auto 26px; padding: 9px 10px 9px 16px;
@@ -112,6 +131,15 @@ button:disabled { cursor: default; }
 .carry-box.active { border: 3px solid var(--pink); background: #ffe2ec; cursor: pointer; animation: pulse 1.2s infinite; }
 .carry-box.marked { border-style: solid; }
 .carry-box.auto-carry { border-color: var(--pink); background: #ffe2ec; animation: carry-pop .24s ease-out both; }
+.borrow-box {
+  width: calc(var(--cell) - 5px); min-height: 46px; padding: 3px 1px; border: 2px dashed #b8c8dc;
+  border-radius: 12px; display: grid; place-items: center; color: #236aa3; background: #f3f9ff;
+  font: 900 clamp(.72rem, 2.4vw, 1rem) ui-monospace, monospace; white-space: nowrap;
+}
+.borrow-box:empty { visibility: hidden; }
+.borrow-box.marked { visibility: visible; border-style: solid; border-color: #3d91ce; background: #e2f3ff; animation: carry-pop .24s ease-out both; }
+.subtraction .answer-row span.active { border-color: #368fc8; background: #eef8ff; box-shadow: 0 0 0 5px rgb(54 143 200 / 17%); }
+.subtraction .answer-row span.filled { color: #236aa3; background: #e6f6ff; border-color: #55a7d9; }
 .operand-row { position: relative; font-size: clamp(2.8rem, 7vw, 4.2rem); line-height: 1.12; }
 .operand-row span { text-align: center; }
 .operand-row.second b { position: absolute; left: -28px; font-weight: 700; }
@@ -155,6 +183,9 @@ button:disabled { cursor: default; }
 @keyframes carry-pop { from { transform: scale(.45); opacity: 0; } }
 
 @media (max-width: 780px) {
+  .operation-grid { grid-template-columns: 1fr; width: min(440px, 100%); gap: 20px; }
+  .operation-card { min-height: 210px; }
+  .operation-icon { font-size: 4rem; }
   .level-grid { grid-template-columns: repeat(2, 1fr); }
   .level-card { min-height: 205px; }
   .game-layout { grid-template-columns: 1fr; }
@@ -168,6 +199,10 @@ button:disabled { cursor: default; }
 @media (max-width: 430px) {
   .app-shell { padding-left: 12px; padding-right: 12px; }
   .level-screen { padding: 18px 11px 86px; }
+  .operation-screen { padding: 18px 12px 82px; }
+  .operation-header { margin-bottom: 22px; }
+  .operation-grid { gap: 16px; }
+  .operation-card { min-height: 190px; padding: 20px 14px; border-radius: 25px; }
   .top-bar { grid-template-columns: 48px 1fr 48px; gap: 7px; }
   .time-choice { width: 100%; justify-content: space-between; padding-left: 12px; gap: 6px; }
   .time-choice button { min-width: 48px; }
@@ -175,16 +210,21 @@ button:disabled { cursor: default; }
   .level-grid { gap: 11px; }
   .level-card { min-height: 188px; border-radius: 20px; padding: 18px 6px 11px; }
   .level-icon { font-size: 2.45rem; }.level-card strong { font-size: 1.1rem; }.level-tag { font-size: .58rem; }
-  .play-screen { padding: 10px 9px 24px; }
-  .game-header { grid-template-columns: 48px 1fr 48px; gap: 7px; }
+  .play-screen { padding: 4px 9px 12px; }
+  .game-header { grid-template-columns: 48px 1fr 48px; gap: 7px; margin-bottom: 4px; }
   .pig-dots { gap: 3px; }.pig-dots i { width: 15px; }
-  .work-card { min-height: 440px; border-radius: 23px; }
-  .feedback-banner { top: 10px; font-size: .95rem; }
-  .timer-row { top: 64px; left: 15px; right: 15px; }
-  .column-board { --cell: min(20vw, 68px); margin-top: 78px; }
+  .game-layout { gap: 8px; }
+  .work-card { min-height: 360px; padding: 6px 12px 8px; border-radius: 23px; }
+  .feedback-banner { top: 4px; min-height: 40px; padding: 7px 13px; font-size: .95rem; }
+  .timer-row { top: 8px; left: 15px; right: 15px; }
+  .work-card.has-feedback .timer-row { top: 50px; }
+  .column-board { --cell: min(20vw, 68px); margin-top: 40px; }
+  .work-card.has-feedback .column-board { margin-top: 80px; }
   .carry-row { min-height: 47px; }.carry-box { width: 42px; height: 42px; }
-  .column-hint { margin-top: 13px; font-size: .76rem; }
-  .keypad-card { border-radius: 23px; }
+  .borrow-box { min-height: 42px; }
+  .column-hint { margin-top: 6px; padding-top: 5px; padding-bottom: 5px; font-size: .76rem; }
+  .keypad-card { padding: 10px 18px 12px; border-radius: 23px; }
+  .keypad-card > p { margin-bottom: 7px; }
 }
 
 @media (max-height: 700px) and (min-width: 781px) {
