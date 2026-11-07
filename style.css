@@ -226,7 +226,7 @@ button:disabled { cursor: default; }
     grid-template-columns: 52px 1fr 52px; gap: 8px;
   }
   .column-board { --cell: min(20vw, 68px); margin-top: 0; }
-  .carry-row { min-height: 30px; }.carry-box { width: 30px; height: 30px; border-radius: 9px; font-size: 1.12rem; }
+  .carry-row { min-height: 30px; }.carry-box { font-size: 1.8rem; }
   .borrow-box { min-height: 30px; padding-top: 1px; padding-bottom: 1px; border-radius: 9px; font-size: .66rem; }
   .column-hint { margin-top: 3px; padding-top: 3px; padding-bottom: 3px; font-size: .76rem; }
   .keypad-card { padding: 10px 18px 12px; border-radius: 23px; }
