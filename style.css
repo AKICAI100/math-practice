@@ -214,12 +214,18 @@ button:disabled { cursor: default; }
   .game-header { grid-template-columns: 48px 1fr 48px; gap: 7px; margin-bottom: 4px; }
   .pig-dots { gap: 3px; }.pig-dots i { width: 15px; }
   .game-layout { gap: 8px; }
-  .work-card { min-height: 292px; padding: 0 12px 3px; justify-content: flex-start; border-radius: 23px; }
-  .feedback-banner { top: 4px; min-height: 40px; padding: 7px 13px; font-size: .95rem; }
-  .timer-row { top: 0; left: 15px; right: 15px; }
-  .work-card.has-feedback .timer-row { top: 50px; }
-  .column-board { --cell: min(20vw, 68px); margin-top: 20px; }
-  .work-card.has-feedback .column-board { margin-top: 70px; }
+  .work-card { min-height: 0; padding: 0 12px 3px; justify-content: flex-start; border-radius: 23px; }
+  .feedback-banner {
+    position: static; display: none; width: auto; max-width: 100%; min-height: 0;
+    margin: 0 auto 2px; padding: 5px 12px; transform: none; opacity: 1;
+    font-size: .9rem;
+  }
+  .feedback-banner:not(:empty) { display: flex; animation: none; }
+  .timer-row {
+    position: static; width: 100%; margin: 0 0 2px;
+    grid-template-columns: 52px 1fr 52px; gap: 8px;
+  }
+  .column-board { --cell: min(20vw, 68px); margin-top: 0; }
   .carry-row { min-height: 30px; }.carry-box { width: 30px; height: 30px; border-radius: 9px; font-size: 1.12rem; }
   .borrow-box { min-height: 30px; padding-top: 1px; padding-bottom: 1px; border-radius: 9px; font-size: .66rem; }
   .column-hint { margin-top: 3px; padding-top: 3px; padding-bottom: 3px; font-size: .76rem; }
